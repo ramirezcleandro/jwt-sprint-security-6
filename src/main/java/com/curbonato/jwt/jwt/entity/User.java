@@ -10,8 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 @Data
 @Builder
@@ -28,13 +27,25 @@ public class User implements UserDetails {
     private String email;
     private String password;
     private boolean enabled;
-    @Enumerated(EnumType.STRING)
-    private Role role;
+    @ManyToMany(cascade = CascadeType.MERGE  , fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+
+    )
+    private Set<Role> roles = new HashSet<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        for (Role role : roles) {
+            authorities.add(new SimpleGrantedAuthority(role.getName()));
+        }
+        return authorities;
     }
+
+
 
     @Override
     public String getUsername() {

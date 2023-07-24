@@ -4,6 +4,7 @@ import com.curbonato.jwt.jwt.dao.request.SignUpRequest;
 import com.curbonato.jwt.jwt.dao.request.SigninRequest;
 import com.curbonato.jwt.jwt.dao.response.JwtAuthenticationResponse;
 import com.curbonato.jwt.jwt.entity.Role;
+import com.curbonato.jwt.jwt.entity.RoleEnum;
 import com.curbonato.jwt.jwt.entity.User;
 import com.curbonato.jwt.jwt.repository.UserRepository;
 import com.curbonato.jwt.jwt.service.AuthenticationService;
@@ -13,6 +14,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +30,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public JwtAuthenticationResponse signup(SignUpRequest request) {
         var user = User.builder().firstName(request.getFirstName()).lastName(request.getLastName())
                 .email(request.getEmail()).password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER).enabled(true).build();
-        System.out.println("signup");
+                .enabled(true).build();
         userRepository.save(user);
         var jwt = jwtService.generateToken(user);
-        System.out.println("jwt : " + jwt);
         return JwtAuthenticationResponse.builder().token(jwt).build();
     }
 
@@ -39,7 +42,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
-        var jwt = jwtService.generateToken(user);
+
+        Map<String, Object> map = user.getRoles().stream()
+                .collect(Collectors.toMap( role -> String.valueOf(role.getId()), role -> role));
+        var jwt = jwtService.generateToken(map,user);
         return JwtAuthenticationResponse.builder().token(jwt).build();
     }
 }
